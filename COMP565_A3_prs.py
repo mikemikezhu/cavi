@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from scipy.stats import pearsonr
+from typing import List
 
 """
 Constants
@@ -33,15 +34,16 @@ class Cavi:
 
     """ Initialize """
 
-    def __init__(self, n, m,
-                 tau_beta,
-                 tau_eps,
-                 pi,
-                 tau_beta_s,
-                 mu_beta_s,
-                 gamma_s,
-                 ld,
-                 marginal) -> None:
+    def __init__(self, n: int,
+                 m: int,
+                 tau_beta: float,
+                 tau_eps: float,
+                 pi: float,
+                 tau_beta_s: float,
+                 mu_beta_s: float,
+                 gamma_s: float,
+                 ld: np.ndarray,
+                 marginal: np.ndarray) -> None:
 
         # Init parameters
         self._tau_beta = tau_beta
@@ -60,7 +62,7 @@ class Cavi:
 
     """ Train CAVI model """
 
-    def fit(self, total_epochs):
+    def fit(self, total_epochs: int) -> List[float]:
 
         result = []
 
@@ -75,17 +77,17 @@ class Cavi:
 
     """ Q4: PRS """
 
-    def predict(self, x):
+    def predict(self, x: np.ndarray) -> np.ndarray:
         return np.matmul(x, np.multiply(self._gamma_s, self._mu_beta_s))
 
     """ Q5: Inferred PIP """
 
-    def get_inferred_pip(self):
+    def get_inferred_pip(self) -> np.ndarray:
         return self._gamma_s
 
     """ Q1: E Step """
 
-    def _calculate_expectation(self):
+    def _calculate_expectation(self) -> None:
 
         for j in range(self._m):
 
@@ -93,12 +95,12 @@ class Cavi:
             self._mu_beta_s[j] = self._get_mu_beta_j(j)
             self._gamma_s[j] = self._get_gamma_j(j)
 
-    def _get_tau_beta_j(self, j):
+    def _get_tau_beta_j(self, j: int) -> float:
         # Inferred precision of effect size
         r_jj = self._ld[j, j]
         return (self._n * r_jj) * self._tau_eps + self._tau_beta
 
-    def _get_mu_beta_j(self, j):
+    def _get_mu_beta_j(self, j: int) -> float:
 
         # Inferred mean of effect size
         tau_beta_j_s = self._tau_beta_s[j]
@@ -117,7 +119,7 @@ class Cavi:
 
         return self._n * self._tau_eps / tau_beta_j_s * (marginal_j - sum)
 
-    def _get_gamma_j(self, j):
+    def _get_gamma_j(self, j: int) -> float:
 
         # Inferred PIP of effect size
         mu_j = self._get_mu_j(j)
@@ -126,7 +128,7 @@ class Cavi:
         result = 0.99 if result > 0.99 else result
         return result
 
-    def _get_mu_j(self, j):
+    def _get_mu_j(self, j) -> float:
 
         tau_beta_j_s = self._tau_beta_s[j]
         mu_beta_j_s = self._mu_beta_s[j]
@@ -135,7 +137,7 @@ class Cavi:
 
     """ Q2: M Step """
 
-    def _update_parameters(self):
+    def _update_parameters(self) -> None:
 
         mu_plus_tau = np.power(self._mu_beta_s, 2) + \
             np.reciprocal(self._tau_beta_s)  # M x 1
@@ -146,10 +148,10 @@ class Cavi:
 
     """ Q3: ELBO """
 
-    def _calculate_elbo(self):
+    def _calculate_elbo(self) -> float:
         return self._elbo_1() + self._elbo_2() + self._elbo_4() - self._elbo_3() - self._elbo_5()
 
-    def _elbo_1(self):
+    def _elbo_1(self) -> float:
 
         part_1 = 0.5 * self._n * math.log(self._tau_eps)
         part_2 = 0.5 * self._tau_eps * self._n
@@ -179,7 +181,7 @@ class Cavi:
 
         return part_1 - part_2 + part_3 - part_4 - part_5
 
-    def _elbo_2(self):
+    def _elbo_2(self) -> float:
 
         part_1 = self._m * (-0.5 * math.log(2 * self._pi)
                             * (1 / self._tau_beta))
@@ -193,7 +195,7 @@ class Cavi:
 
         return part_1 - part_2
 
-    def _elbo_3(self):
+    def _elbo_3(self) -> float:
 
         part_1 = self._m * (-0.5 * math.log(2 * self._pi)
                             * (1 / self._tau_beta))
@@ -201,7 +203,7 @@ class Cavi:
 
         return part_1 - part_2
 
-    def _elbo_4(self):
+    def _elbo_4(self) -> float:
 
         result = 0
         for j in range(self._m):
@@ -210,7 +212,7 @@ class Cavi:
                 math.log(self._pi) + (1 - gamma_j_s) * math.log(1 - self._pi)
         return result
 
-    def _elbo_5(self):
+    def _elbo_5(self) -> float:
 
         result = 0
         for j in range(self._m):
